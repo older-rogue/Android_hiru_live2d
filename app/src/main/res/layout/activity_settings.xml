@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- 标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="20dp">
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:padding="10dp"
+            android:src="@drawable/back"
+            />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="设置"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="60dp"
+            android:padding="16dp"
+            android:text="保存"
+            android:textColor="#1976D2"
+
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <!-- 滚动内容区域 -->
+    <ScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- AI 配置卡片 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AI 配置"
+                        android:textColor="#1976D2"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <!-- Base URL -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Base URL *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_ai_base_url"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入 API 地址"
+                        android:inputType="textUri"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- API Key -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="API Key *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_ai_api_key"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入密钥"
+                        android:inputType="textPassword"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Model -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Model *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_ai_model"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入模型名称"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Timeout -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Timeout (ms)"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_ai_timeout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="超时时间（可选）"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- System Prompt -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="System Prompt"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_ai_system_prompt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top|start"
+                        android:hint="系统提示词（可选）"
+                        android:inputType="textMultiLine"
+                        android:maxLines="4"
+                        android:minLines="2"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ASR 配置卡片 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ASR 配置"
+                        android:textColor="#388E3C"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <!-- App ID -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="App ID *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_asr_app_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入应用 ID"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Token -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Token *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_asr_token"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入令牌"
+                        android:inputType="textPassword"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Address -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Address *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_asr_address"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入服务地址"
+                        android:inputType="textUri"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- URI -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="URI *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_asr_uri"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入 URI"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Resource ID -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Resource ID *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_asr_resource_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入资源 ID"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- TTS 配置卡片 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TTS 配置"
+                        android:textColor="#F57C00"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <!-- App ID -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="App ID *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_tts_app_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入应用 ID"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Token -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Token *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_tts_token"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入令牌"
+                        android:inputType="textPassword"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Address -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Address *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_tts_address"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入服务地址"
+                        android:inputType="textUri"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- URI -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="URI *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_tts_uri"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入 URI"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                    <!-- Resource ID -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Resource ID *"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/et_tts_resource_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="输入资源 ID"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- 底部占位 -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="24dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
