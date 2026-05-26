@@ -26,14 +26,14 @@ class AiRepositoryImpl : AiRepository {
         aiClient = AiClient(aiConfig)
     }
 
-    override suspend fun chat(input: String, memoryContext: String?): Result<ChatResponse> {
+    override suspend fun chat(input: String, currentMemory: String): Result<ChatResponse> {
         // 如果未初始化，自动使用默认配置初始化
         if (aiClient == null) {
             init()
         }
         val client = aiClient ?: return Result.failure(IllegalStateException("AiClient not initialized"))
         return runCatching {
-            val response = client.chat(input, memoryContext)
+            val response = client.chat(input, currentMemory)
             response.toChatResponse()
         }
     }

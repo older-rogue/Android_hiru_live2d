@@ -40,10 +40,13 @@ data class AiResponse(
 
     @Serializable
     data class SystemBackContent(
+        @SerialName("is_valid")
+        val is_valid: Boolean = true,
         val text: String? = null,
         val action: String? = null,
         val tone: String? = null,
-        val delay: String? = null
+        val delay: String? = null,
+        val memory: String? = null
     )
 
     /**

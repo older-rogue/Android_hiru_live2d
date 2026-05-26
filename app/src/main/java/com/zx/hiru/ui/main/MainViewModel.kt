@@ -7,7 +7,6 @@ import com.zx.hiru.data.service.TtsService
 import com.zx.hiru.domain.model.ChatState
 import com.zx.hiru.domain.usecase.ChatUseCase
 import com.zx.hiru.domain.usecase.ConfigUseCase
-import com.zx.hiru.domain.usecase.MemoryUseCase
 import com.zx.hiru.domain.usecase.MotionUseCase
 import com.zx.hiru.tts.EmotionMapper
 import kotlinx.coroutines.delay
@@ -24,7 +23,6 @@ import kotlinx.coroutines.launch
  */
 class MainViewModel(
     private val chatUseCase: ChatUseCase,
-    private val memoryUseCase: MemoryUseCase,
     private val configUseCase: ConfigUseCase,
     private val motionUseCase: MotionUseCase,
     private val asrService: AsrService,
@@ -37,8 +35,7 @@ class MainViewModel(
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
-    // 当前对话（用于记忆更新）
-    private var currentUserInput: String = ""
+    // 当前对话
     private var currentAiResponse: String = ""
 
     init {
@@ -83,7 +80,6 @@ class MainViewModel(
      * 处理用户输入
      */
     private fun processUserInput(text: String) {
-        currentUserInput = text
         _uiState.update { it.copy(isProcessing = true) }
 
         viewModelScope.launch {
@@ -124,11 +120,8 @@ class MainViewModel(
 
             override fun onPlayComplete() {
                 _uiState.update { it.copy(isSpeaking = false, isProcessing = false) }
-                // 更新记忆并重新监听
+                // 记忆已在 ChatUseCase 中保存，直接重新监听
                 viewModelScope.launch {
-                    if (currentUserInput.isNotEmpty() && currentAiResponse.isNotEmpty()) {
-                        memoryUseCase.updateAfterConversation(currentUserInput, currentAiResponse)
-                    }
                     startListening()
                 }
             }

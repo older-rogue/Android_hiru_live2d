@@ -192,8 +192,8 @@ class AsrManager private constructor() : SpeechEngine.SpeechListener {
         setOptionInt(SpeechEngineDefines.PARAMS_KEY_VAD_MAX_SPEECH_DURATION_INT, 60000)
         // 【可选配置】直接传递自定义的ASR请求JSON Request，若使用此参数需自行确保JSON格式正确
         val resParams = JSONObject()
-        resParams.put("enable_nonstream", true)
         resParams.put("end_window_size", 200)
+        resParams.put("enable_ddc", true)
         setOptionString(SpeechEngineDefines.PARAMS_KEY_ASR_REQ_PARAMS_STRING, resParams.toString())
     }
 

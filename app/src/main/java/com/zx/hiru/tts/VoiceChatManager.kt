@@ -5,7 +5,6 @@ import android.util.Log
 import com.zx.hiru.ai.AiClient
 import com.zx.hiru.ai.AiConfig
 import com.zx.hiru.ai.AiResponse
-import com.zx.hiru.ai.DialogValidator
 import com.zx.hiru.ai.MemoryManager
 import com.zx.live2d.LAppLive2DManager
 import com.zx.live2d.LipSyncManager
@@ -23,8 +22,8 @@ import kotlinx.coroutines.withContext
  *
  * 支持连续语音识别模式：
  * - 应用启动后自动开启连续语音识别
- * - 在调用角色扮演AI之前，先用DialogValidator判断语音内容是否为有效对话
- * - 无效内容（噪音、无意义声音、误触发）会被过滤
+ * - AI 在单次请求中同时完成内容验证、角色回复和记忆更新
+ * - 无效内容（噪音、无意义声音、误触发）会被 AI 的 is_valid 字段过滤
  * - AI回复完成后自动重新开始监听
  *
  * 使用示例：
@@ -48,9 +47,6 @@ class VoiceChatManager {
     // AI客户端
     private var aiClient: AiClient? = null
 
-    // 对话内容判断器
-    private val dialogValidator = DialogValidator()
-
     // 记忆管理器
     private val memoryManager = MemoryManager.getInstance()
 
@@ -67,12 +63,15 @@ class VoiceChatManager {
     // 对话历史（最近5轮）
     private val conversationHistory = mutableListOf<Pair<String, String>>()
 
-    // 当前对话（用于记忆更新）
-    private var currentUserInput: String = ""
-    private var currentAiResponse: String = ""
-
     // 回调
     private var callback: VoiceChatCallback? = null
+
+    // === 耗时统计 ===
+    private var timeAsrEnd: Long = 0      // 录音结束时间
+    private var timeAiStart: Long = 0     // AI请求开始时间
+    private var timeAiEnd: Long = 0       // AI响应返回时间
+    private var timeTtsStart: Long = 0    // TTS合成开始时间
+    private var timePlayStart: Long = 0   // 播放开始时间
 
     /**
      * 对话回调接口
@@ -184,7 +183,8 @@ class VoiceChatManager {
         }
 
         isListening = true
-        Log.i(TAG, "Start listening")
+        timeAsrEnd = System.currentTimeMillis()
+        Log.i(TAG, "=== [录音] 开始 ===")
 
         asrManager.startRecognition(object : AsrManager.AsrCallback {
             override fun onResult(text: String, isFinal: Boolean) {
@@ -194,12 +194,9 @@ class VoiceChatManager {
                 if (isFinal && text.isNotEmpty()) {
                     // 最终识别结果，停止识别并处理
                     isListening = false
-                    // 在连续模式下，先验证内容有效性
-                    if (isContinuousMode) {
-                        validateAndProcess(text)
-                    } else {
-                        processUserInput(text)
-                    }
+                    timeAsrEnd = System.currentTimeMillis()
+                    Log.i(TAG, "=== [录音] 结束 (用户: $text) ===")
+                    processUserInput(text)
                 }
             }
 
@@ -259,34 +256,6 @@ class VoiceChatManager {
     }
 
     /**
-     * 验证内容并处理
-     */
-    private fun validateAndProcess(text: String) {
-        scope.launch {
-            try {
-                Log.i(TAG, "Validating input: $text")
-                val isValid = withContext(Dispatchers.IO) {
-                    dialogValidator.validate(text)
-                }
-
-                if (isValid) {
-                    Log.i(TAG, "Content is valid, processing...")
-                    processUserInput(text)
-                } else {
-                    Log.i(TAG, "Content is invalid, filtered: $text")
-                    callback?.onContentFiltered(text)
-                    // 无效内容，重新开始监听
-                    restartListening()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Validation error: ${e.message}")
-                // 验证出错时，默认为有效并继续处理
-                processUserInput(text)
-            }
-        }
-    }
-
-    /**
      * 停止语音识别
      */
     fun stopListening() {
@@ -299,6 +268,7 @@ class VoiceChatManager {
 
     /**
      * 处理用户输入（发送给AI）
+     * AI 在单次请求中完成验证、回复、记忆更新
      */
     private fun processUserInput(text: String) {
         if (text.isEmpty()) {
@@ -306,32 +276,45 @@ class VoiceChatManager {
             return
         }
 
-        // 保存当前用户输入，用于后续记忆更新
-        currentUserInput = text
-
         isProcessing = true
+        timeAiStart = System.currentTimeMillis()
+        val asrDuration = timeAiStart - timeAsrEnd
+        Log.i(TAG, "=== [AI] 请求开始 (ASR→AI 间隔: ${asrDuration}ms) ===")
         callback?.onAiThinking()
 
         scope.launch {
             try {
                 val client = aiClient ?: throw IllegalStateException("AiClient not initialized")
-                Log.i(TAG, "Sending to AI: $text")
+                Log.i(TAG, "用户输入: $text")
 
-                // 获取记忆上下文
-                val memoryContext = memoryManager.getMemoryContext()
-                if (memoryContext.isNotEmpty()) {
-                    Log.d(TAG, "Using memory context: ${memoryContext.take(100)}...")
-                }
-
+                val currentMemory = memoryManager.getMemory()
                 val response = withContext(Dispatchers.IO) {
-                    client.chat(text, memoryContext)
+                    client.chat(text, currentMemory)
                 }
 
-                Log.i(TAG, "AI response: ${response.text}")
-                callback?.onAiResponse(response)
+                timeAiEnd = System.currentTimeMillis()
+                val aiDuration = timeAiEnd - timeAiStart
+                Log.i(TAG, "=== [AI] 请求结束 (耗时: ${aiDuration}ms) is_valid=${response.is_valid}, text=${response.text} ===")
 
-                // 保存AI回复，用于后续记忆更新
-                currentAiResponse = response.text ?: ""
+                // 检查验证结果
+                if (!response.is_valid) {
+                    Log.i(TAG, "内容被过滤: $text")
+                    isProcessing = false
+                    callback?.onContentFiltered(text)
+                    if (isContinuousMode) {
+                        restartListening()
+                    }
+                    return@launch
+                }
+
+                // 保存 AI 返回的记忆
+                response.memory?.let { memory ->
+                    if (memory.isNotBlank() && memory != "无变化") {
+                        memoryManager.updateMemoryText(memory)
+                    }
+                }
+
+                callback?.onAiResponse(response)
 
                 // 添加到对话历史
                 response.text?.let { aiText ->
@@ -341,40 +324,37 @@ class VoiceChatManager {
                 // AI回复后，进行语音合成（带情绪）
                 response.text?.let { speakText ->
                     if (speakText.isNotEmpty()) {
-                        // 将AI的tone映射到TTS情绪
                         val ttsEmotion = EmotionMapper.mapToTtsEmotion(response.tone)
                         Log.d(TAG, "Map tone '${response.tone}' to TTS emotion '$ttsEmotion'")
+                        timeTtsStart = System.currentTimeMillis()
+                        val ttsDelay = timeTtsStart - timeAiEnd
+                        Log.i(TAG, "=== [TTS] 合成开始 (AI→TTS 间隔: ${ttsDelay}ms) ===")
                         speak(speakText, ttsEmotion)
                     } else {
-                        // 没有回复内容，更新记忆并重新开始监听
-                        updateMemoryAndRestart()
+                        // 没有回复内容，直接重新开始监听
+                        isProcessing = false
+                        if (isContinuousMode) {
+                            restartListening()
+                        }
                     }
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "AI processing error: ${e.message}")
+                isProcessing = false
                 callback?.onError("AI", -1, e.message ?: "Unknown error")
-                // 出错时，在连续模式下重新开始监听
                 if (isContinuousMode) {
                     restartListening()
                 }
-            } finally {
-                isProcessing = false
             }
         }
     }
 
     /**
-     * 更新记忆并重新开始监听
+     * 重新开始监听（连续模式下）
      */
-    private fun updateMemoryAndRestart() {
-        // 异步更新记忆
-        if (currentUserInput.isNotEmpty() && currentAiResponse.isNotEmpty()) {
-            memoryManager.processConversation(currentUserInput, currentAiResponse) {
-                Log.i(TAG, "Memory updated")
-            }
-        }
-        // 重新开始监听
+    private fun restartListeningAfterSpeak() {
+        isProcessing = false
         if (isContinuousMode) {
             restartListening()
         }
@@ -401,32 +381,40 @@ class VoiceChatManager {
         }
 
         isSpeaking = true
-        Log.i(TAG, "Start speaking: $text, emotion: $emotion")
+        Log.i(TAG, "=== [TTS] 开始 (text: $text, emotion: $emotion) ===")
 
         ttsManager.speak(text, emotion, object : TtsManager.TtsCallback {
             override fun onSynthesisStart(text: String) {
-                Log.d(TAG, "TTS synthesis start")
+                val synDelay = System.currentTimeMillis() - timeTtsStart
+                Log.i(TAG, "[TTS] 合成中... (TTS→合成间隔: ${synDelay}ms)")
             }
 
             override fun onSynthesisComplete() {
-                Log.d(TAG, "TTS synthesis complete")
+                val synDuration = System.currentTimeMillis() - timeTtsStart
+                Log.i(TAG, "[TTS] 合成完成 (合成耗时: ${synDuration}ms)")
             }
 
             override fun onPlayStart() {
-                Log.d(TAG, "TTS play start")
+                timePlayStart = System.currentTimeMillis()
+                val playDelay = timePlayStart - timeTtsStart
+                Log.i(TAG, "=== [播放] 开始 (TTS→播放间隔: ${playDelay}ms) ===")
                 // 启用唇同步
                 LAppLive2DManager.getInstance().setLipSyncEnabled(true)
                 callback?.onAiSpeakStart(text)
             }
 
             override fun onPlayComplete() {
-                Log.d(TAG, "TTS play complete")
+                val playEnd = System.currentTimeMillis()
+                val playDuration = playEnd - timePlayStart
+                val totalDuration = playEnd - timeAsrEnd
+                Log.i(TAG, "=== [播放] 结束 (播放耗时: ${playDuration}ms) ===")
+                Log.i(TAG, "=== [流水线总览] 录音结束→播放结束 总耗时: ${totalDuration}ms ===")
                 // 禁用唇同步
                 LAppLive2DManager.getInstance().setLipSyncEnabled(false)
                 isSpeaking = false
                 callback?.onAiSpeakComplete()
-                // 更新记忆并重新开始监听
-                updateMemoryAndRestart()
+                // 重新开始监听
+                restartListeningAfterSpeak()
             }
 
             override fun onError(errorCode: Int, errorMessage: String) {
@@ -495,7 +483,6 @@ class VoiceChatManager {
         ttsManager.release()
         aiClient?.close()
         aiClient = null
-        dialogValidator.close()
         conversationHistory.clear()
         // 取消所有协程
         scopeJob.cancel()

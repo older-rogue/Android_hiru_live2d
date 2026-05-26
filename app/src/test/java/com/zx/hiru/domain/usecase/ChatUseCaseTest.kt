@@ -1,6 +1,5 @@
 package com.zx.hiru.domain.usecase
 
-import com.zx.hiru.ai.DialogValidator
 import com.zx.hiru.data.repository.AiRepository
 import com.zx.hiru.data.repository.MemoryRepository
 import com.zx.hiru.domain.model.ChatResponse
@@ -24,7 +23,6 @@ class ChatUseCaseTest {
 
     private lateinit var aiRepository: AiRepository
     private lateinit var memoryRepository: MemoryRepository
-    private lateinit var dialogValidator: DialogValidator
     private lateinit var chatUseCase: ChatUseCase
 
     private val testDispatcher = StandardTestDispatcher()
@@ -34,8 +32,7 @@ class ChatUseCaseTest {
         Dispatchers.setMain(testDispatcher)
         aiRepository = mockk()
         memoryRepository = mockk()
-        dialogValidator = mockk()
-        chatUseCase = ChatUseCase(aiRepository, memoryRepository, dialogValidator)
+        chatUseCase = ChatUseCase(aiRepository, memoryRepository)
     }
 
     @AfterEach
@@ -44,9 +41,11 @@ class ChatUseCaseTest {
     }
 
     @Test
-    fun `when input is invalid, should emit Filtered state`() = runTest {
-        // Given - DialogValidator.validate 是 suspend 函数，使用 coEvery
-        coEvery { dialogValidator.validate("test") } returns false
+    fun `when AI returns is_valid false, should emit Filtered state`() = runTest {
+        // Given
+        val response = ChatResponse(text = "", tone = null, action = null, isValid = false)
+        every { memoryRepository.getMemory() } returns ""
+        coEvery { aiRepository.chat("test", "") } returns Result.success(response)
 
         // When
         val flow = chatUseCase.execute("test")
@@ -58,13 +57,12 @@ class ChatUseCaseTest {
     }
 
     @Test
-    fun `when input is valid, should emit Thinking and Responding states`() = runTest {
+    fun `when AI returns is_valid true, should emit Thinking and Responding states`() = runTest {
         // Given
-        val response = ChatResponse("Hello", null, null)
-        coEvery { dialogValidator.validate("hello") } returns true
-        every { memoryRepository.getMemoryContext() } returns ""
+        val response = ChatResponse(text = "Hello", tone = null, action = null, isValid = true)
+        every { memoryRepository.getMemory() } returns ""
         coEvery { aiRepository.chat("hello", "") } returns Result.success(response)
-        coEvery { memoryRepository.updateMemory(any(), any()) } returns Result.success(Unit)
+        coEvery { memoryRepository.saveMemory(any()) } returns Result.success(Unit)
 
         // When
         val flow = chatUseCase.execute("hello")
@@ -74,5 +72,20 @@ class ChatUseCaseTest {
         // Then
         assertTrue(states.any { it is ChatState.Thinking })
         assertTrue(states.any { it is ChatState.Responding })
+    }
+
+    @Test
+    fun `when AI fails, should emit Error state`() = runTest {
+        // Given
+        every { memoryRepository.getMemory() } returns ""
+        coEvery { aiRepository.chat("hello", "") } returns Result.failure(RuntimeException("Network error"))
+
+        // When
+        val flow = chatUseCase.execute("hello")
+        val states = mutableListOf<ChatState>()
+        flow.collect { states.add(it) }
+
+        // Then
+        assertTrue(states.any { it is ChatState.Error })
     }
 }

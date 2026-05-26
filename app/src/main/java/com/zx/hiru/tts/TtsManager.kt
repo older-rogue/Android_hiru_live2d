@@ -49,7 +49,16 @@ class TtsManager private constructor() : SpeechEngine.SpeechListener {
     private var pendingEmotion: String? = null
     private var pendingEmotionScale: Int = 4
 
-    private val startPayload: String = "{\"req_params\":{\"speaker\":\"saturn_zh_female_keainvsheng_tob\"}}"
+    private val startPayload: String = "{\n" +
+            "  \"req_params\": {\n" +
+            "    \"speaker\": \"saturn_zh_female_keainvsheng_tob\",\n" +
+            "    \"audio_params\": {\n" +
+            "      \"speech_rate\": 0,\n" +
+            "      \"sample_rate\": 44100,\n" +
+            "      \"bit_rate\": 128000\n" +
+            "    }\n" +
+            "  }\n" +
+            "}"
 
     /**
      * 语音合成回调接口

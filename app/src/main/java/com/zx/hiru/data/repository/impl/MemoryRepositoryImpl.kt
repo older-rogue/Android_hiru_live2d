@@ -25,9 +25,11 @@ class MemoryRepositoryImpl(
 
     override fun getMemoryContext(): String = memoryManager.getMemoryContext()
 
-    override suspend fun updateMemory(userInput: String, aiResponse: String): Result<Unit> {
+    override suspend fun saveMemory(memoryText: String): Result<Unit> {
         return runCatching {
-            memoryManager.processConversation(userInput, aiResponse)
+            if (memoryText.isNotBlank() && memoryText != "无变化") {
+                memoryManager.updateMemoryText(memoryText)
+            }
         }
     }
 

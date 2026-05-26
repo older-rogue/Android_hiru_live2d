@@ -15,11 +15,10 @@ interface MemoryRepository {
     fun getMemoryContext(): String
 
     /**
-     * 更新记忆
-     * @param userInput 用户输入
-     * @param aiResponse AI 回复
+     * 直接保存记忆文本（由 AI 在对话中返回）
+     * @param memoryText 新的记忆文本，空字符串或"无变化"表示不更新
      */
-    suspend fun updateMemory(userInput: String, aiResponse: String): Result<Unit>
+    suspend fun saveMemory(memoryText: String): Result<Unit>
 
     /**
      * 清空记忆

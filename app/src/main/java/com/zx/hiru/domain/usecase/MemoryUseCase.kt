@@ -11,10 +11,10 @@ class MemoryUseCase(
     private val memoryRepository: MemoryRepository
 ) {
     /**
-     * 对话后更新记忆
+     * 保存记忆文本（由 AI 在对话中返回）
      */
-    suspend fun updateAfterConversation(userInput: String, aiResponse: String): Result<Unit> {
-        return memoryRepository.updateMemory(userInput, aiResponse)
+    suspend fun saveMemory(memoryText: String): Result<Unit> {
+        return memoryRepository.saveMemory(memoryText)
     }
 
     /**

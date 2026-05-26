@@ -1,6 +1,5 @@
 package com.zx.hiru.di
 
-import com.zx.hiru.ai.DialogValidator
 import com.zx.hiru.config.RuntimeConfigRepository
 import com.zx.hiru.data.repository.AiRepository
 import com.zx.hiru.data.repository.ConfigRepository
@@ -27,11 +26,11 @@ import org.koin.dsl.module
  */
 val appModule = module {
     // ViewModel
-    viewModel { MainViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { MainViewModel(get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get()) }
 
     // UseCase
-    factory { ChatUseCase(get(), get(), get()) }
+    factory { ChatUseCase(get(), get()) }
     factory { MemoryUseCase(get()) }
     factory { ConfigUseCase(get()) }
     factory { MotionUseCase() }
@@ -44,9 +43,6 @@ val appModule = module {
     // Service - 需要传入 Context
     single<AsrService> { AsrServiceImpl(androidContext()) }
     single<TtsService> { TtsServiceImpl(androidContext()) }
-
-    // Validator
-    single { DialogValidator() }
 
     // Runtime Config Repository
     single { RuntimeConfigRepository() }

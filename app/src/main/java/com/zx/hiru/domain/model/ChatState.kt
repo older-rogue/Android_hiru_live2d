@@ -7,9 +7,6 @@ sealed class ChatState {
     /** 空闲状态 */
     object Idle : ChatState()
 
-    /** 正在验证输入 */
-    object Validating : ChatState()
-
     /** 内容被过滤 */
     data class Filtered(val text: String) : ChatState()
 

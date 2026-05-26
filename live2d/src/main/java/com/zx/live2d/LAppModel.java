@@ -78,6 +78,12 @@ public class LAppModel extends CubismUserModel {
 
         // 获取参数ID管理器
         CubismIdManager idManager = CubismFramework.getIdManager();
+        if (idManager == null) {
+            throw new IllegalStateException(
+                "CubismFramework.getIdManager() returned null. " +
+                "Ensure CubismFramework.startUp() and initialize() have been called before creating LAppModel."
+            );
+        }
 
         // 获取常用参数ID（头部角度、眼球位置等）
         idParamAngleX = idManager.getId(ParameterId.ANGLE_X.getId());

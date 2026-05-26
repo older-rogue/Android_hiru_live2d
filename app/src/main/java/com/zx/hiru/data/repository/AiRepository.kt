@@ -9,10 +9,10 @@ interface AiRepository {
     /**
      * 发送消息并获取 AI 回复
      * @param input 用户输入
-     * @param memoryContext 记忆上下文
-     * @return 对话响应结果
+     * @param currentMemory 当前记忆原文
+     * @return 对话响应结果（含验证、台词、记忆更新）
      */
-    suspend fun chat(input: String, memoryContext: String?): Result<ChatResponse>
+    suspend fun chat(input: String, currentMemory: String = ""): Result<ChatResponse>
 
     /**
      * 清空对话历史

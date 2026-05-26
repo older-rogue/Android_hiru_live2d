@@ -32,6 +32,10 @@ import kotlin.coroutines.suspendCoroutine
  */
 class AiClient(private val config: AiConfig) {
 
+    companion object {
+        private const val TAG = "AiClient"
+    }
+
     private val list = mutableListOf<AiRequest.Message>()
 
     private val client = NetworkKit.createHttpClient(config.timeoutMs)
@@ -40,34 +44,42 @@ class AiClient(private val config: AiConfig) {
      * 发送消息并获取AI回复
      *
      * @param input 用户输入的消息
-     * @param memoryContext 记忆上下文（可选）
-     * @return AI的回复文本
+     * @param currentMemory 当前记忆原文（空字符串表示无记忆）
+     * @return AI的回复（包含验证结果、台词、记忆更新）
      * @throws AiException 如果请求失败或响应解析失败
      */
-    suspend fun chat(input: String, memoryContext: String? = null): AiResponse.SystemBackContent {
+    suspend fun chat(input: String, currentMemory: String = ""): AiResponse.SystemBackContent {
         if (list.isEmpty()) {
-            // 构建系统提示词，包含记忆上下文
-            val systemPrompt = if (!memoryContext.isNullOrEmpty()) {
-                "${config.systemPrompt}\n\n$memoryContext"
-            } else {
-                config.systemPrompt
-            }
+            val systemPrompt = buildSystemPrompt(currentMemory)
             list.add(AiRequest.Message("system", systemPrompt))
-        } else if (!memoryContext.isNullOrEmpty()) {
-            // 如果已有消息列表但需要更新记忆，在第一条系统消息后插入记忆
-            // 查找是否有记忆消息，有则更新，无则插入
-            val memoryIndex = list.indexOfFirst {
-                it.role == "system" && it.content.contains("【关于用户的记忆】")
-            }
-            if (memoryIndex >= 0) {
-                list[memoryIndex] = AiRequest.Message("system", "${config.systemPrompt}\n\n$memoryContext")
-            }
+        } else {
+            // 更新第一条系统消息（包含最新记忆）
+            val systemPrompt = buildSystemPrompt(currentMemory)
+            list[0] = AiRequest.Message("system", systemPrompt)
         }
         if (list.size > 20) {
             list.removeAt(1)
         }
         list.add(AiRequest.Message(role = "user", content = input))
-        return chatWithMessages(list)
+        val response = chatWithMessages(list)
+        // 无效对话不保留在历史中，避免污染上下文
+        if (!response.is_valid) {
+            // 移除刚添加的 user 消息和 assistant 回复
+            if (list.size >= 2) {
+                list.removeAt(list.size - 1) // assistant
+                list.removeAt(list.size - 1) // user
+            }
+            Log.d(TAG, "Filtered message removed from history, remaining: ${list.size}")
+        }
+        return response
+    }
+
+    private fun buildSystemPrompt(currentMemory: String): String {
+        return if (currentMemory.isNotEmpty()) {
+            "${config.systemPrompt}\n\n【当前记忆】$currentMemory"
+        } else {
+            config.systemPrompt
+        }
     }
 
     /**
@@ -87,33 +99,52 @@ class AiClient(private val config: AiConfig) {
                 stream = false,
             )
 
-            val requestBody = NetworkKit.json.encodeToString(request)
-                .toRequestBody(NetworkKit.jsonMediaType)
+            val requestJson = NetworkKit.json.encodeToString(request)
+            val requestBody = requestJson.toRequestBody(NetworkKit.jsonMediaType)
 
             val baseUrl = config.baseUrl.trimEnd('/')
+            val url = "$baseUrl/chat/completions"
             val httpRequest = Request.Builder()
-                .url("$baseUrl/chat/completions")
+                .url(url)
                 .addHeader("Authorization", "Bearer ${config.apiKey}")
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody)
                 .build()
 
+            val startTime = System.currentTimeMillis()
+
+            Log.i(TAG, "=== AI Request ===")
+            Log.i(TAG, "URL: $url")
+            Log.i(
+                TAG,
+                "Model: ${config.model}, Messages: ${messages.size}, MaxTokens: ${config.maxTokens}"
+            )
+            Log.d(TAG, "Request body: ${messages.subList(1, messages.size)}")
+
             client.newCall(httpRequest).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
+                    val elapsed = System.currentTimeMillis() - startTime
+                    Log.e(TAG, "Request failed after ${elapsed}ms: ${e.message}")
                     coroutine.resumeWithException(AiException("网络出问题了"))
                 }
 
                 override fun onResponse(call: Call, response: Response) {
+                    val elapsed = System.currentTimeMillis() - startTime
                     val responseBody = response.body?.string()
                     if (responseBody.isNullOrEmpty()) {
+                        Log.e(TAG, "Empty response body, elapsed: ${elapsed}ms")
                         coroutine.resumeWithException(AiException("无返回"))
                         return
                     }
 
+                    Log.i(TAG, "=== AI Response (${elapsed}ms) ===")
+                    Log.d(TAG, "Response body: $responseBody")
+
                     val aiResponse = NetworkKit.json.decodeFromString<AiResponse>(responseBody)
                     val text = aiResponse.getText()
-                    Log.d("AiClient",text.orEmpty())
+                    Log.i(TAG, "Parsed text: $text")
                     if (text.isNullOrEmpty()) {
+                        Log.e(TAG, "Response contained no text, elapsed: ${elapsed}ms")
                         coroutine.resumeWithException(AiException("无返回"))
                         return
                     }
@@ -121,8 +152,13 @@ class AiClient(private val config: AiConfig) {
                     runCatching {
                         val systemBackContent =
                             NetworkKit.json.decodeFromString<AiResponse.SystemBackContent>(text)
+                        Log.i(
+                            TAG,
+                            "Parsed: is_valid=${systemBackContent.is_valid}, action=${systemBackContent.action}, tone=${systemBackContent.tone}, memory=${systemBackContent.memory}"
+                        )
                         coroutine.resume(systemBackContent)
                     }.onFailure {
+                        Log.e(TAG, "JSON parse failed, raw text: $text")
                         coroutine.resumeWithException(AiException("json格式有误"))
                     }
 

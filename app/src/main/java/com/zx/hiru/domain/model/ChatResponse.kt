@@ -8,7 +8,9 @@ package com.zx.hiru.domain.model
 data class ChatResponse(
     val text: String,
     val tone: String?,
-    val action: String?
+    val action: String?,
+    val isValid: Boolean = true,
+    val memory: String? = null
 )
 
 /**
@@ -18,6 +20,8 @@ fun com.zx.hiru.ai.AiResponse.SystemBackContent.toChatResponse(): ChatResponse {
     return ChatResponse(
         text = text ?: "",
         tone = tone,
-        action = action
+        action = action,
+        isValid = is_valid,
+        memory = memory
     )
 }
